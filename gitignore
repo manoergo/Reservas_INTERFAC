@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+
+# Local databases and generated files
+*.db
+*.sqlite
+*.sqlite3
+documentos_laboratorio/
+evidencias_laboratorio/
+registro_laboratorio_interfac.xlsx
+*.zip
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# OS/editor
+.DS_Store
+.vscode/

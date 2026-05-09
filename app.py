@@ -61,7 +61,7 @@ TIPOS_ACTIVIDAD = [
     "Otro",
 ]
 
-ESTADOS_PROYECTO = ["Activo", "Pausado", "Finalizado", "Cancelado"]
+ESTADOS_PROYECTO = ["Activo", "Suspendido", "Archivado", "Finalizado", "Cancelado"]
 
 ESTADOS_RESERVA = [
     "Pendiente",
@@ -540,6 +540,34 @@ def regenerar_codigo_maestro(proyecto_id):
     )
     conn.commit()
     conn.close()
+
+
+def eliminar_proyecto_completo(proyecto_id):
+    """Elimina un proyecto y todo lo asociado: reservas, visitantes y cierres."""
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT id FROM reservas WHERE proyecto_id = ?", (int(proyecto_id),))
+    reservas = [row[0] for row in cursor.fetchall()]
+
+    for reserva_id in reservas:
+        cursor.execute("DELETE FROM cierres WHERE reserva_id = ?", (int(reserva_id),))
+        cursor.execute("DELETE FROM visitantes WHERE reserva_id = ?", (int(reserva_id),))
+        cursor.execute("DELETE FROM reservas WHERE id = ?", (int(reserva_id),))
+
+    cursor.execute("DELETE FROM proyectos WHERE id = ?", (int(proyecto_id),))
+
+    conn.commit()
+    conn.close()
+
+
+def contar_reservas_proyecto(proyecto_id):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM reservas WHERE proyecto_id = ?", (int(proyecto_id),))
+    total = cursor.fetchone()[0]
+    conn.close()
+    return total
 
 
 # =========================================================
@@ -1799,6 +1827,75 @@ elif menu == "Panel administrador":
                         regenerar_codigo_maestro(proyecto_id)
                         st.warning("Código maestro regenerado. El anterior dejará de servir.")
                         st.rerun()
+
+                st.markdown("### Acciones administrativas del proyecto")
+
+                total_reservas_proyecto = contar_reservas_proyecto(proyecto_id)
+
+                st.info(
+                    f"Este proyecto tiene {total_reservas_proyecto} reserva(s) asociada(s). "
+                    "Para conservar trazabilidad, se recomienda archivar o suspender antes que eliminar."
+                )
+
+                cola, colb, colc = st.columns(3)
+
+                with cola:
+                    if st.button("Archivar proyecto"):
+                        actualizar_proyecto(
+                            proyecto_id,
+                            "Archivado",
+                            responsables_autorizados,
+                            observaciones_proyecto,
+                            responsable_proyecto_edit,
+                            docente_supervisor_edit,
+                        )
+                        st.warning("Proyecto archivado. Ya no aparecerá como activo para nuevas solicitudes.")
+                        st.rerun()
+
+                with colb:
+                    if st.button("Suspender proyecto"):
+                        actualizar_proyecto(
+                            proyecto_id,
+                            "Suspendido",
+                            responsables_autorizados,
+                            observaciones_proyecto,
+                            responsable_proyecto_edit,
+                            docente_supervisor_edit,
+                        )
+                        st.warning("Proyecto suspendido. Ya no aparecerá como activo para nuevas solicitudes.")
+                        st.rerun()
+
+                with colc:
+                    if st.button("Reactivar proyecto"):
+                        actualizar_proyecto(
+                            proyecto_id,
+                            "Activo",
+                            responsables_autorizados,
+                            observaciones_proyecto,
+                            responsable_proyecto_edit,
+                            docente_supervisor_edit,
+                        )
+                        st.success("Proyecto reactivado.")
+                        st.rerun()
+
+                with st.expander("Eliminar proyecto permanentemente"):
+                    st.error(
+                        "Esta acción elimina el proyecto y también sus reservas, visitantes y cierres asociados. "
+                        "Úsala solo para registros de prueba o proyectos creados por error."
+                    )
+
+                    confirmacion = st.text_input(
+                        "Para eliminar, escriba exactamente: ELIMINAR PROYECTO",
+                        key=f"confirmar_eliminar_proyecto_{proyecto_id}",
+                    )
+
+                    if st.button("Eliminar definitivamente este proyecto"):
+                        if confirmacion.strip() == "ELIMINAR PROYECTO":
+                            eliminar_proyecto_completo(proyecto_id)
+                            st.warning("Proyecto eliminado permanentemente.")
+                            st.rerun()
+                        else:
+                            st.error("Confirmación incorrecta. No se eliminó el proyecto.")
 
                 st.subheader("Historial del proyecto")
                 df_res = cargar_reservas()

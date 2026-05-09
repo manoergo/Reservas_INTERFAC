@@ -1163,10 +1163,14 @@ def formulario_cierre_operativo(reserva):
 # =========================================================
 
 st.set_page_config(
-    page_title="INTERFA-C Lab",
-    page_icon="🪑",
-    layout="wide"
+    page_title="Laboratorio INTERFA-C",
+    page_icon="🧪",
+    layout="wide",
 )
+
+init_db()
+
+
 
 st.markdown("""
 <h1 style='
@@ -1177,6 +1181,7 @@ margin-bottom:0px;
 🪑 Sistema de Gestión del Laboratorio de Ergonomía INTERFA-C
 </h1>
 """, unsafe_allow_html=True)
+
 st.caption("Proyectos, reservas, trazabilidad, cierre operativo, validación final y evidencias")
 
 menu = st.sidebar.radio(
